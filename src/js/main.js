@@ -35,6 +35,10 @@ const lwSelection = document.querySelector(
   "#long-weekends-view .view-header-selection",
 );
 
+// Saved Plans
+const plansContent = document.getElementById("plans-content");
+const clearAllPlansBtn = document.getElementById("clear-all-plans-btn");
+
 // Update the time every minute in the header of the page
 function updateTime() {
   const countryDateTime = document.getElementById("current-datetime");
@@ -306,7 +310,6 @@ async function changeCountry() {
 
     selectedData.countryData = countryData;
 
-    console.log(countryData);
     selectedData.latitude = countryData.coordinates.lat;
     selectedData.longitude = countryData.coordinates.lng;
 
@@ -586,17 +589,23 @@ function displayHolidays() {
     return;
   }
 
-  const savedPlans = getSavedPlans();
-
   holidaysContent.innerHTML = selectedData.holidays
-    .map((holiday) => {
-      const date = new Date(holiday.date);
+    .map((holiday, index) => {
+      var date = new Date(holiday.date);
 
-      const planId = `holiday-${holiday.date}-${holiday.localName}`;
+      var savedPlans = getSavedPlans();
+      var isSaved = false;
 
-      // 3. Check if this holiday id exists in the savedPlans
-      const isSaved = savedPlans.some((plan) => plan.id === planId);
-      const holidayData = JSON.stringify(holiday).replace(/"/g, "&quot;");
+      for (var j = 0; j < savedPlans.length; j++) {
+        if (
+          savedPlans[j].type === "holiday" &&
+          savedPlans[j].date === holiday.date &&
+          savedPlans[j].title === holiday.name
+        ) {
+          isSaved = true;
+          break;
+        }
+      }
 
       return `
         <div class="holiday-card">
@@ -605,8 +614,11 @@ function displayHolidays() {
               <span class="day">${date.toLocaleString("en-US", { day: "numeric" })}</span>
               <span class="month">${date.toLocaleString("en-US", { month: "short" }).toUpperCase()}</span>
             </div>
-            <button class="holiday-action-btn ${isSaved ? "saved" : ""}" onclick="savePlan('holiday', ${holidayData})">
-              <i class="fa-${isSaved ? "solid" : "regular"} fa-heart"></i>
+            <button
+              class="holiday-action-btn ${isSaved ? "saved" : ""}"
+              data-holiday-index="${index}"
+            >
+              <i class="${isSaved ? "fa-solid" : "fa-regular"} fa-heart"></i>
             </button>
           </div>
           <h3>${holiday.localName}</h3>
@@ -621,6 +633,51 @@ function displayHolidays() {
     `;
     })
     .join("");
+
+  var saveButtons = document.querySelectorAll(".holiday-action-btn");
+
+  // Add click event to each button
+  for (var i = 0; i < saveButtons.length; i++) {
+    saveButtons[i].addEventListener("click", function () {
+      var index = this.getAttribute("data-holiday-index");
+
+      saveHoliday(selectedData.holidays[index]);
+    });
+  }
+}
+
+function saveHoliday(holiday) {
+  var savedPlans = getSavedPlans();
+
+  var plan = {
+    id: "holiday-" + holiday.date + "-" + holiday.name,
+    type: "holiday",
+    title: holiday.name,
+    localName: holiday.localName,
+    date: holiday.date,
+    location: selectedData.countryName,
+    countryCode: holiday.countryCode,
+  };
+
+  var alreadySaved = false;
+
+  for (var i = 0; i < savedPlans.length; i++) {
+    if (savedPlans[i].id === plan.id) {
+      alreadySaved = true;
+      break;
+    }
+  }
+
+  if (alreadySaved) {
+    showToast("This holiday is already saved.", "info");
+    return;
+  }
+
+  savedPlans.push(plan);
+
+  localStorage.setItem("mySavedPlans", JSON.stringify(savedPlans));
+  // showToast("Holiday saved successfully!", "success");
+  displayHolidays();
 }
 
 // show Events for selected country
@@ -1442,214 +1499,183 @@ function displayLongWeekends() {
 }
 
 // Saved Plans
+// LocalStorage key
+// const PLANS_STORAGE_KEY = "mySavedPlans";
 
-let currentPlanFilter = "all";
+// Get Saved Plans from LocalStorage
 function getSavedPlans() {
-  const plans = localStorage.getItem("savedPlans");
-  return plans ? JSON.parse(plans) : [];
+  return JSON.parse(localStorage.getItem("mySavedPlans")) || [];
 }
 
-function savePlan(type, rawData) {
-  let savedPlans = getSavedPlans();
+function savePlan(type, item) {
+  console.log("Type:", type);
+  console.log("Item:", item);
 
-  // إنتاج ID فريد لكل عنصر لسهولة التمييز
-  let id = "";
-  let planItem = {};
+  var savedPlans = getSavedPlans();
 
-  if (type === "holiday") {
-    id = `holiday-${rawData.date}-${rawData.localName}`;
-    planItem = {
-      id: id,
-      type: "holiday",
-      title: rawData.localName || rawData.name,
-      subtitle: rawData.name,
-      date: rawData.date,
-      badge: rawData.types ? rawData.types[0] : "Public",
-      originalData: rawData,
-    };
-  } else if (type === "event") {
-    id = `event-${rawData.id}`;
-    planItem = {
-      id: id,
-      type: "event",
-      title: rawData.name,
-      subtitle: rawData._embedded?.venues?.[0]?.name || "Venue TBA",
-      date: rawData.dates?.start?.localDate || "Date TBA",
-      badge: rawData.classifications?.[0]?.segment?.name || "Event",
-      url: rawData.url || "#",
-      image: rawData.images?.[0]?.url || "",
-      originalData: rawData,
-    };
-  } else if (type === "long-weekend") {
-    id = `lw-${rawData.startDate}-${rawData.dayCount}`;
-    planItem = {
-      id: id,
-      type: "long-weekend",
-      title: `${rawData.dayCount} Days Long Weekend`,
-      subtitle: `${rawData.startDate} to ${rawData.endDate}`,
-      date: rawData.startDate,
-      badge: "Long Weekend",
-      originalData: rawData,
-    };
+  var alreadySaved = false;
+
+  for (var i = 0; i < savedPlans.length; i++) {
+    if (
+      savedPlans[i].type === type &&
+      savedPlans[i].item.name === item.name &&
+      savedPlans[i].item.date === item.date
+    ) {
+      alreadySaved = true;
+      break;
+    }
   }
-}
-// 2. Update badge counters on filter buttons
-function updatePlanCounts() {
-  const savedPlans = getSavedPlans();
 
-  const allCount = savedPlans.length;
-  const holidayCount = savedPlans.filter((p) => p.type === "holiday").length;
-  const eventCount = savedPlans.filter((p) => p.type === "event").length;
-  // Handle both "longweekend" and "long-weekend" naming
-  const lwCount = savedPlans.filter(
-    (p) => p.type === "longweekend" || p.type === "long-weekend",
-  ).length;
+  if (alreadySaved) {
+    showToast("This item is already saved.", "info");
+    return;
+  }
 
-  const elAll = document.getElementById("filter-all-count");
-  const elHoliday = document.getElementById("filter-holiday-count");
-  const elEvent = document.getElementById("filter-event-count");
-  const elLw = document.getElementById("filter-lw-count");
+  savedPlans.push({
+    type: type,
+    item: item,
+  });
 
-  if (elAll) elAll.textContent = allCount;
-  if (elHoliday) elHoliday.textContent = holidayCount;
-  if (elEvent) elEvent.textContent = eventCount;
-  if (elLw) elLw.textContent = lwCount;
+  localStorage.setItem("mySavedPlans", JSON.stringify(savedPlans));
+  showToast("Saved successfully!", "success");
+
+  console.log("Plan saved successfully!");
 }
 
-// 3. Render cards inside #plans-content based on active filter
 function displaySavedPlans() {
-  const plansContent = document.getElementById("plans-content");
-  if (!plansContent) return;
+  var savedPlans = getSavedPlans();
 
-  const savedPlans = getSavedPlans();
-  updatePlanCounts(); // Refresh counters
-
-  // Filter items based on current active tab
-  let filteredPlans = savedPlans;
-  if (currentPlanFilter !== "all") {
-    filteredPlans = savedPlans.filter((plan) => {
-      if (currentPlanFilter === "longweekend") {
-        return plan.type === "longweekend" || plan.type === "long-weekend";
-      }
-      return plan.type === currentPlanFilter;
-    });
+  if (plansContent === null) {
+    return;
   }
 
-  // EMPTY STATE: If no items match current filter (or array is empty)
-  if (filteredPlans.length === 0) {
+  if (savedPlans.length === 0) {
     plansContent.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">
           <i class="fa-solid fa-heart-crack"></i>
         </div>
-        <h3>No ${currentPlanFilter === "all" ? "Saved" : currentPlanFilter.toUpperCase()} Plans Yet</h3>
-        <p>Start exploring and save holidays, events, or long weekends you like!</p>
-        <button class="btn-primary" id="start-exploring-btn" onclick="document.querySelector('[data-view=\\'dashboard\\']').click()">
-          <i class="fa-solid fa-compass"></i> Start Exploring
+        <h3>No Saved Plans Yet</h3>
+        <p>
+          Start exploring and save holidays, events, or long weekends
+          you like!
+        </p>
+        <button class="btn-primary" id="start-exploring-btn">
+          <i class="fa-solid fa-compass"></i>
+          Start Exploring
         </button>
       </div>
     `;
-    plansContent.style.display = "block";
+
     return;
   }
 
-  // RENDER CARDS GRID
-  plansContent.style.display = ""; // Reset grid display
-  plansContent.innerHTML = filteredPlans
-    .map((plan) => {
-      let typeIcon = "fa-calendar-check";
-      let typeLabel = "Holiday";
+  var plansHTML = "";
 
-      if (plan.type === "event") {
-        typeIcon = "fa-ticket";
-        typeLabel = "Event";
-      } else if (plan.type === "longweekend" || plan.type === "long-weekend") {
-        typeIcon = "fa-umbrella-beach";
-        typeLabel = "Long Weekend";
-      }
+  for (var i = 0; i < savedPlans.length; i++) {
+    var plan = savedPlans[i];
 
-      return `
+    plansHTML += `
       <div class="plan-card">
-        <div class="plan-card-header">
-          <span class="plan-type-badge ${plan.type}">
-            <i class="fa-solid ${typeIcon}"></i> ${typeLabel}
-          </span>
-          <button class="btn-delete-plan" onclick="deletePlan('${plan.id}')" title="Remove plan">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
-        </div>
-        <div class="plan-card-body">
-          <h3>${plan.title}</h3>
-          <p class="plan-subtitle">${plan.subtitle || ""}</p>
-          <div class="plan-meta">
-            <span><i class="fa-regular fa-calendar"></i> ${plan.date}</span>
+        <span class="plan-card-type ${plan.type}">${plan.type}</span>
+        <div class="plan-card-content">
+          <h4>${plan.title}</h4>
+
+          <div class="plan-card-details">
+            <div><i class="fa-regular fa-calendar"></i>${plan.date}</div>
+            <div><i class="fa-solid fa-location-dot"></i>${plan.location}</div>
+          </div>
+          
+          <div class="plan-card-actions">
+            <button class="btn-plan-remove" onclick="deletePlan('${plan.id}')">
+              <i class="fa-solid fa-trash"></i> Remove
+            </button>
           </div>
         </div>
-        ${
-          plan.url
-            ? `
-          <div class="plan-card-footer">
-            <a href="${plan.url}" target="_blank" class="btn-plan-link">
-              View Details <i class="fa-solid fa-arrow-up-right-from-square"></i>
-            </a>
-          </div>
-        `
-            : ""
-        }
       </div>
     `;
-    })
-    .join("");
+  }
+
+  plansContent.innerHTML = plansHTML;
 }
 
-// 4. Delete single plan
 function deletePlan(planId) {
-  let savedPlans = getSavedPlans();
-  savedPlans = savedPlans.filter((plan) => plan.id !== planId);
+  Swal.fire({
+    title: "Remove Plan?",
+    text: "Are you sure you want to remove this plan?",
+    icon: "warning",
+    showCancelButton: !0,
+    confirmButtonColor: "#ef4444",
+    cancelButtonColor: "#64748b",
+    confirmButtonText: "Yes, remove it!",
+    cancelButtonText: "Cancel",
+  }).then(function (result) {
+    if (result.isConfirmed) {
+      var savedPlans = getSavedPlans();
+      var updatedPlans = [];
 
-  localStorage.setItem("savedPlans", JSON.stringify(savedPlans));
-  if (typeof showToast === "function") showToast("Plan removed!", "info");
-
-  displaySavedPlans(); // Re-render view
-}
-
-// 5. Initialize listeners for Clear All & Filter Buttons
-function initPlansPage() {
-  // Wire up filter buttons
-  const filterButtons = document.querySelectorAll(".plan-filter");
-  filterButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filterButtons.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      currentPlanFilter = btn.dataset.filter;
-      displaySavedPlans();
-    });
-  });
-
-  // Wire up "Clear All" button
-  const clearBtn = document.getElementById("clear-all-plans-btn");
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      const savedPlans = getSavedPlans();
-      if (savedPlans.length === 0) {
-        if (typeof showToast === "function")
-          showToast("You have no plans to clear.", "info");
-        return;
+      for (var i = 0; i < savedPlans.length; i++) {
+        if (savedPlans[i].id !== planId) {
+          updatedPlans.push(savedPlans[i]);
+        }
       }
 
-      localStorage.setItem("savedPlans", JSON.stringify([]));
-      if (typeof showToast === "function")
-        showToast("All saved plans cleared!", "info");
+      localStorage.setItem("mySavedPlans", JSON.stringify(updatedPlans));
+
       displaySavedPlans();
-    });
-  }
+
+      Swal.fire({
+        title: "Removed!",
+        text: "The plan has been removed.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    }
+  });
 }
 
-// Call init once DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-  initPlansPage();
-});
+if (clearAllPlansBtn !== null) {
+  clearAllPlansBtn.addEventListener("click", function () {
+    var savedPlans = getSavedPlans();
+
+    if (savedPlans.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "No Saved Plans",
+        text: "There are no saved plans to clear.",
+        confirmButtonText: "OK",
+      });
+
+      return;
+    }
+
+    Swal.fire({
+      title: "Clear All Plans?",
+      text: "This will permanently delete all your saved plans. This action cannot be undone!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, clear all!",
+      cancelButtonText: "Cancel",
+    }).then(function (result) {
+      if (result.isConfirmed) {
+        localStorage.removeItem("mySavedPlans");
+
+        displaySavedPlans();
+
+        Swal.fire({
+          title: "Cleared!",
+          text: "All your plans have been removed.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
+    });
+  });
+}
 
 // when the clear button (x) is clicked, return to the empty state
 const clearBtn = document.getElementById("clear-selection-btn");
