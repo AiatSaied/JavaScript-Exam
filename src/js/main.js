@@ -354,7 +354,7 @@ function updateSelectedDestination() {
 
 function exploreDestination() {
   if (selectedData.countryCode === "") {
-    showToast("Please select a country.", "error");
+    // showToast("Please select a country.", "error");
     return;
   }
 
@@ -589,11 +589,13 @@ function displayHolidays() {
     return;
   }
 
+  var savedPlans = getSavedPlans();
+
   holidaysContent.innerHTML = selectedData.holidays
     .map((holiday, index) => {
       var date = new Date(holiday.date);
-
-      var savedPlans = getSavedPlans();
+      var planId = "holiday-" + holiday.date + "-" + holiday.name;
+      // var savedPlans = getSavedPlans();
       var isSaved = false;
 
       for (var j = 0; j < savedPlans.length; j++) {
@@ -616,7 +618,8 @@ function displayHolidays() {
             </div>
             <button
               class="holiday-action-btn ${isSaved ? "saved" : ""}"
-              data-holiday-index="${index}"
+              data-index="${index}"
+              data-plan-id="${planId}"
             >
               <i class="${isSaved ? "fa-solid" : "fa-regular"} fa-heart"></i>
             </button>
@@ -634,50 +637,34 @@ function displayHolidays() {
     })
     .join("");
 
+  // Add click event to save button (heart icon)
   var saveButtons = document.querySelectorAll(".holiday-action-btn");
 
-  // Add click event to each button
   for (var i = 0; i < saveButtons.length; i++) {
     saveButtons[i].addEventListener("click", function () {
-      var index = this.getAttribute("data-holiday-index");
+      var index = this.dataset.index;
 
-      saveHoliday(selectedData.holidays[index]);
+      var holiday = selectedData.holidays[index];
+
+      var plan = {
+        id: "holiday-" + holiday.date + "-" + holiday.name,
+        type: "holiday",
+        title: holiday.name,
+        localName: holiday.localName,
+        date: holiday.date,
+        location: selectedData.countryName,
+        countryCode: holiday.countryCode,
+      };
+      if (isPlanSaved(plan.id)) {
+        removePlan(plan.id);
+      } else {
+        savePlan(plan);
+      }
+
+      // displayHolidays();
+      // displaySavedPlans();
     });
   }
-}
-
-function saveHoliday(holiday) {
-  var savedPlans = getSavedPlans();
-
-  var plan = {
-    id: "holiday-" + holiday.date + "-" + holiday.name,
-    type: "holiday",
-    title: holiday.name,
-    localName: holiday.localName,
-    date: holiday.date,
-    location: selectedData.countryName,
-    countryCode: holiday.countryCode,
-  };
-
-  var alreadySaved = false;
-
-  for (var i = 0; i < savedPlans.length; i++) {
-    if (savedPlans[i].id === plan.id) {
-      alreadySaved = true;
-      break;
-    }
-  }
-
-  if (alreadySaved) {
-    showToast("This holiday is already saved.", "info");
-    return;
-  }
-
-  savedPlans.push(plan);
-
-  localStorage.setItem("mySavedPlans", JSON.stringify(savedPlans));
-  // showToast("Holiday saved successfully!", "success");
-  displayHolidays();
 }
 
 // show Events for selected country
@@ -1500,54 +1487,95 @@ function displayLongWeekends() {
 
 // Saved Plans
 // LocalStorage key
-// const PLANS_STORAGE_KEY = "mySavedPlans";
+const storagePlans = "mySavedPlans";
 
 // Get Saved Plans from LocalStorage
 function getSavedPlans() {
-  return JSON.parse(localStorage.getItem("mySavedPlans")) || [];
+  return JSON.parse(localStorage.getItem(storagePlans)) || [];
 }
 
-function savePlan(type, item) {
-  console.log("Type:", type);
-  console.log("Item:", item);
+function isPlanSaved(planId) {
+  var savedPlans = getSavedPlans();
 
+  for (var i = 0; i < savedPlans.length; i++) {
+    if (savedPlans[i].id === planId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function savePlan(plan) {
   var savedPlans = getSavedPlans();
 
   var alreadySaved = false;
 
   for (var i = 0; i < savedPlans.length; i++) {
-    if (
-      savedPlans[i].type === type &&
-      savedPlans[i].item.name === item.name &&
-      savedPlans[i].item.date === item.date
-    ) {
+    if (savedPlans[i].id === plan.id) {
       alreadySaved = true;
       break;
     }
   }
 
   if (alreadySaved) {
-    showToast("This item is already saved.", "info");
+    // showToast("This item is already saved.", "info");
     return;
   }
 
-  savedPlans.push({
-    type: type,
-    item: item,
+  savedPlans.push(plan);
+
+  localStorage.setItem(storagePlans, JSON.stringify(savedPlans));
+
+  // showToast("Item saved successfully!", "success");
+  displaySavedPlans();
+  displayHolidays();
+}
+
+function removePlan(planId) {
+  Swal.fire({
+    title: "Remove Plan?",
+    text: "Are you sure you want to remove this plan?",
+    icon: "warning",
+    showCancelButton: !0,
+    confirmButtonColor: "#ef4444",
+    cancelButtonColor: "#64748b",
+    confirmButtonText: "Yes, remove it!",
+    cancelButtonText: "Cancel",
+  }).then(function (result) {
+    if (result.isConfirmed) {
+      var savedPlans = getSavedPlans();
+      var updatedPlans = [];
+
+      for (var i = 0; i < savedPlans.length; i++) {
+        if (savedPlans[i].id !== planId) {
+          updatedPlans.push(savedPlans[i]);
+        }
+      }
+
+      localStorage.setItem(storagePlans, JSON.stringify(updatedPlans));
+
+      Swal.fire({
+        title: "Removed!",
+        text: "The plan has been removed.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      // Refresh the Saved Plans section
+      displaySavedPlans();
+
+      // Refresh the current section
+      displayHolidays();
+    }
   });
-
-  localStorage.setItem("mySavedPlans", JSON.stringify(savedPlans));
-  showToast("Saved successfully!", "success");
-
-  console.log("Plan saved successfully!");
 }
 
 function displaySavedPlans() {
   var savedPlans = getSavedPlans();
 
-  if (plansContent === null) {
-    return;
-  }
+  plansContent.innerHTML = "";
 
   if (savedPlans.length === 0) {
     plansContent.innerHTML = `
@@ -1570,12 +1598,10 @@ function displaySavedPlans() {
     return;
   }
 
-  var plansHTML = "";
-
   for (var i = 0; i < savedPlans.length; i++) {
     var plan = savedPlans[i];
 
-    plansHTML += `
+    plansContent.innerHTML += `
       <div class="plan-card">
         <span class="plan-card-type ${plan.type}">${plan.type}</span>
         <div class="plan-card-content">
@@ -1587,7 +1613,7 @@ function displaySavedPlans() {
           </div>
           
           <div class="plan-card-actions">
-            <button class="btn-plan-remove" onclick="deletePlan('${plan.id}')">
+            <button class="btn-plan-remove" data-plan-id="${plan.id}">
               <i class="fa-solid fa-trash"></i> Remove
             </button>
           </div>
@@ -1596,43 +1622,17 @@ function displaySavedPlans() {
     `;
   }
 
-  plansContent.innerHTML = plansHTML;
-}
+  var removePlanButton = document.querySelectorAll(".btn-plan-remove");
+  for (var j = 0; j < removePlanButton.length; j++) {
+    removePlanButton[j].addEventListener("click", function () {
+      var planId = this.getAttribute("data-plan-id");
 
-function deletePlan(planId) {
-  Swal.fire({
-    title: "Remove Plan?",
-    text: "Are you sure you want to remove this plan?",
-    icon: "warning",
-    showCancelButton: !0,
-    confirmButtonColor: "#ef4444",
-    cancelButtonColor: "#64748b",
-    confirmButtonText: "Yes, remove it!",
-    cancelButtonText: "Cancel",
-  }).then(function (result) {
-    if (result.isConfirmed) {
-      var savedPlans = getSavedPlans();
-      var updatedPlans = [];
+      removePlan(planId);
 
-      for (var i = 0; i < savedPlans.length; i++) {
-        if (savedPlans[i].id !== planId) {
-          updatedPlans.push(savedPlans[i]);
-        }
-      }
-
-      localStorage.setItem("mySavedPlans", JSON.stringify(updatedPlans));
-
-      displaySavedPlans();
-
-      Swal.fire({
-        title: "Removed!",
-        text: "The plan has been removed.",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-    }
-  });
+      // displaySavedPlans();
+      // displayHolidays();
+    });
+  }
 }
 
 if (clearAllPlansBtn !== null) {
@@ -1661,7 +1661,7 @@ if (clearAllPlansBtn !== null) {
       cancelButtonText: "Cancel",
     }).then(function (result) {
       if (result.isConfirmed) {
-        localStorage.removeItem("mySavedPlans");
+        localStorage.removeItem(storagePlans);
 
         displaySavedPlans();
 
