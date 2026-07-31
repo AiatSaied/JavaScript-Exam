@@ -1991,8 +1991,35 @@ function loadApp() {
   planFilter();
   displaySavedPlans();
 
-  const path = window.location.pathname.replace("/", "");
-  const initialView = path || "dashboard";
+  // const path = window.location.pathname.replace("/", "");
+  // const initialView = path || "dashboard";
+
+  // // history.replaceState({ view: initialView }, "", "#" + initialView);
+  // history.replaceState(
+  //   { view: initialView },
+  //   "",
+  //   window.location.pathname + "#" + initialView,
+  // );
+
+  // activateView(initialView);
+
+  let hash = window.location.hash.replace("#", "");
+  const validViews = [
+    "dashboard",
+    "holidays",
+    "events",
+    "weather",
+    "currency",
+    "sun-times",
+    "long-weekends",
+    "my-plans",
+  ];
+
+  if (!validViews.includes(hash)) {
+    hash = "dashboard";
+  }
+
+  const initialView = hash;
 
   // history.replaceState({ view: initialView }, "", "#" + initialView);
   history.replaceState(
