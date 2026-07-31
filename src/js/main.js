@@ -275,7 +275,7 @@ function showSections() {
 
       const viewName = item.getAttribute("data-view");
 
-      history.pushState({ view: viewName }, "", "/#" + viewName);
+      history.pushState({ view: viewName }, "", "#" + viewName);
       activateView(viewName);
     });
   }
@@ -1989,7 +1989,7 @@ function loadApp() {
   const initialView = path || "dashboard";
 
   // history.replaceState({ view: initialView }, "", "/" + initialView);
-  history.replaceState({ view: initialView }, "", "/#" + initialView);
+  history.replaceState({ view: initialView }, "", "#" + initialView);
   activateView(initialView);
 }
 
