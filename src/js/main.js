@@ -275,8 +275,7 @@ function showSections() {
 
       const viewName = item.getAttribute("data-view");
 
-      // history.pushState({ view: viewName }, "", "/" + viewName);
-      history.pushState({ view: viewName }, "", "#" + viewName);
+      history.pushState({ view: viewName }, "", "/#" + viewName);
       activateView(viewName);
     });
   }
@@ -383,13 +382,9 @@ async function changeCountry() {
     selectedData.longitude = countryData.coordinates.lng;
 
     displayCity(countryData);
-
-    console.log(countryData);
-    // displayCity(selectedData.countryData);
+    // console.log(countryData);
 
     updateSelectedDestination();
-
-    console.log(data);
 
     showLoading(false);
   } catch (error) {
@@ -440,7 +435,6 @@ function exploreDestination() {
 
 function displayCountryInfo() {
   const country = selectedData.countryData;
-  console.log(country);
   if (country === "") {
     return;
   }
@@ -750,7 +744,7 @@ async function getEvents() {
     const data = await response.json();
 
     selectedData.events = data._embedded?.events || [];
-    console.log("Events fetched successfully!", selectedData.events);
+    // console.log("Events fetched successfully!", selectedData.events);
 
     if (eventsSelection !== null) {
       eventsSelection.style.display = "flex";
@@ -1130,7 +1124,7 @@ async function getWeather() {
     const data = await response.json();
 
     selectedData.weather = data;
-    console.log("Weather fetched successfully!", selectedData.weather);
+    // console.log("Weather fetched successfully!", selectedData.weather);
 
     if (weatherSelection !== null) {
       weatherSelection.style.display = "flex";
@@ -1473,11 +1467,6 @@ async function getLongWeekends() {
     const data = await response.json();
 
     selectedData.longWeekends = data || [];
-
-    console.log(
-      "Long Weekends fetched successfully!",
-      selectedData.longWeekends,
-    );
 
     if (lwSelection) {
       lwSelection.style.display = "block";
@@ -1999,7 +1988,8 @@ function loadApp() {
   const path = window.location.pathname.replace("/", "");
   const initialView = path || "dashboard";
 
-  history.replaceState({ view: initialView }, "", "/" + initialView);
+  // history.replaceState({ view: initialView }, "", "/" + initialView);
+  history.replaceState({ view: initialView }, "", "/#" + initialView);
   activateView(initialView);
 }
 
