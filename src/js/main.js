@@ -275,7 +275,13 @@ function showSections() {
 
       const viewName = item.getAttribute("data-view");
 
-      history.pushState({ view: viewName }, "", "#" + viewName);
+      // history.pushState({ view: viewName }, "", "#" + viewName);
+
+      history.pushState(
+        { view: viewName },
+        "",
+        window.location.pathname + "#" + viewName,
+      );
       activateView(viewName);
     });
   }
@@ -1988,8 +1994,13 @@ function loadApp() {
   const path = window.location.pathname.replace("/", "");
   const initialView = path || "dashboard";
 
-  // history.replaceState({ view: initialView }, "", "/" + initialView);
-  history.replaceState({ view: initialView }, "", "#" + initialView);
+  // history.replaceState({ view: initialView }, "", "#" + initialView);
+  history.replaceState(
+    { view: initialView },
+    "",
+    window.location.pathname + "#" + initialView,
+  );
+
   activateView(initialView);
 }
 
