@@ -667,12 +667,20 @@ function displayHolidays() {
       // var savedPlans = getSavedPlans();
       var isSaved = false;
 
+      // for (var j = 0; j < savedPlans.length; j++) {
+      //   if (
+      //     savedPlans[j].type === "holiday" &&
+      //     savedPlans[j].date === holiday.date &&
+      //     savedPlans[j].title === holiday.name
+      //   ) {
+      //     isSaved = true;
+      //     break;
+      //   }
+      // }
+
+      var isSaved = false;
       for (var j = 0; j < savedPlans.length; j++) {
-        if (
-          savedPlans[j].type === "holiday" &&
-          savedPlans[j].date === holiday.date &&
-          savedPlans[j].title === holiday.name
-        ) {
+        if (savedPlans[j].id === planId) {
           isSaved = true;
           break;
         }
@@ -707,7 +715,9 @@ function displayHolidays() {
     .join("");
 
   // Add click event to save button (heart icon)
-  var saveHolidayButtons = document.querySelectorAll(".holiday-action-btn");
+  var saveHolidayButtons = holidaysContent.querySelectorAll(
+    ".holiday-action-btn",
+  );
 
   for (var i = 0; i < saveHolidayButtons.length; i++) {
     saveHolidayButtons[i].addEventListener("click", function () {
@@ -878,8 +888,8 @@ function displayEvents() {
   }
 
   eventsContent.innerHTML = eventsHTML;
-  var eventCardSave = document.querySelectorAll(".event-card-save");
-  var eventSaveButtons = document.querySelectorAll(".btn-event");
+  var eventCardSave = eventsContent.querySelectorAll(".event-card-save");
+  var eventSaveButtons = eventsContent.querySelectorAll(".btn-event");
   // Add event listener to each heart button
   for (var i = 0; i < eventCardSave.length; i++) {
     eventCardSave[i].addEventListener("click", function () {
@@ -1599,7 +1609,9 @@ function displayLongWeekends() {
     })
     .join("");
 
-  var saveLongWeekendButtons = document.querySelectorAll(".holiday-action-btn");
+  var saveLongWeekendButtons = lwContent.querySelectorAll(
+    ".holiday-action-btn",
+  );
 
   for (var i = 0; i < saveLongWeekendButtons.length; i++) {
     saveLongWeekendButtons[i].addEventListener("click", function () {
