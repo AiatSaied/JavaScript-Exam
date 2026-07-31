@@ -1,4 +1,10 @@
 // variables
+const navItems = document.querySelectorAll(".nav-item");
+const views = document.querySelectorAll(".view");
+const pageTitle = document.getElementById("page-title");
+const pageSubtitle = document.getElementById("page-subtitle");
+
+// Dashboard
 const countrySelect = document.getElementById("global-country");
 const citySelect = document.getElementById("global-city");
 const yearSelect = document.getElementById("global-year");
@@ -12,10 +18,6 @@ const selectedCountryFlag = document.getElementById("selected-country-flag");
 
 // Country Info
 const countryInfo = document.getElementById("dashboard-country-info");
-// const dashboardCountryFlag = document.querySelector(".dashboard-country-flag");
-// const dashboardCountryTitle = document.querySelector(
-//   ".dashboard-country-title",
-// );
 
 // Holidays
 const holidaysSelection = document.getElementById("holidays-selection");
@@ -35,9 +37,27 @@ const lwSelection = document.querySelector(
   "#long-weekends-view .view-header-selection",
 );
 
+// Currency
+var currencyAmount = document.getElementById("currency-amount");
+var currencyFrom = document.getElementById("currency-from");
+var currencyTo = document.getElementById("currency-to");
+var swapCurrenciesBtn = document.getElementById("swap-currencies-btn");
+var convertBtn = document.getElementById("convert-btn");
+var currencyResult = document.getElementById("currency-result");
+var popularCurrencies = document.getElementById("popular-currencies");
+
 // Saved Plans
+const NumberSavedPlans = document.getElementById("stat-saved");
 const plansContent = document.getElementById("plans-content");
 const clearAllPlansBtn = document.getElementById("clear-all-plans-btn");
+
+// Counts
+var myPlansCount = document.getElementById("plans-count");
+
+var allPlansCount = document.getElementById("filter-all-count");
+var holidaysCount = document.getElementById("filter-holiday-count");
+var eventsCount = document.getElementById("filter-event-count");
+var longWeekendsCount = document.getElementById("filter-lw-count");
 
 // Update the time every minute in the header of the page
 function updateTime() {
@@ -175,50 +195,100 @@ function setEmptyLongWeekends() {
     lwContent.style.display = "block";
   }
 }
-setEmptyHolidays();
+
 setEmptyDashboard();
+setEmptyHolidays();
 setEmptyEvents();
 setEmptyWeather();
 setEmptyLongWeekends();
 
 // Switch between sections based on the clicked nav item
-function showSections() {
-  const navItems = document.querySelectorAll(".nav-item");
-  const views = document.querySelectorAll(".view");
+function activateView(viewName) {
+  const pageHeaders = {
+    dashboard: {
+      title: "Dashboard",
+      subtitle: "Welcome back! Ready to plan your next adventure?",
+    },
+    holidays: {
+      title: "Holidays",
+      subtitle: "Explore public holidays around the world",
+    },
+    events: {
+      title: "Events",
+      subtitle: "Find concerts, sports, and entertainment",
+    },
+    weather: {
+      title: "Weather",
+      subtitle: "Check forecasts for any destination",
+    },
+    "long-weekends": {
+      title: "Long Weekends",
+      subtitle: "Find the perfect mini-trip opportunities",
+    },
+    currency: {
+      title: "Currency",
+      subtitle: "Convert currencies with live exchange rates",
+    },
+    "my-plans": {
+      title: "My Plans",
+      subtitle: "Your saved holidays, events, and trip ideas all in one place",
+    },
+    "sun-times": {
+      title: "Sun Times",
+      subtitle: "Check sunrise and sunset times worldwide",
+    },
+  };
 
+  for (let j = 0; j < navItems.length; j++) {
+    navItems[j].classList.remove("active");
+    if (navItems[j].getAttribute("data-view") === viewName) {
+      navItems[j].classList.add("active");
+    }
+  }
+
+  for (let k = 0; k < views.length; k++) {
+    views[k].classList.remove("active");
+  }
+  const targetElement = document.getElementById(viewName + "-view");
+  if (targetElement) {
+    targetElement.classList.add("active");
+  }
+
+  if (pageTitle && pageSubtitle && pageHeaders[viewName]) {
+    pageTitle.textContent = pageHeaders[viewName].title;
+    pageSubtitle.textContent = pageHeaders[viewName].subtitle;
+  }
+  if (viewName === "events") {
+    if (selectedData.city) getEvents();
+    else setEmptyEvents();
+  } else if (viewName === "my-plans") {
+    displaySavedPlans();
+  }
+}
+
+function showSections() {
   for (let i = 0; i < navItems.length; i++) {
     const item = navItems[i];
 
     item.addEventListener("click", function (e) {
       e.preventDefault();
 
-      // remove "active" class from all nav items
-      for (let j = 0; j < navItems.length; j++) {
-        navItems[j].classList.remove("active");
-      }
+      const viewName = item.getAttribute("data-view");
 
-      // add "active" class to the clicked nav item
-      item.classList.add("active");
-
-      // remove "active" class from all views
-      for (let k = 0; k < views.length; k++) {
-        views[k].classList.remove("active");
-      }
-
-      // show the target view based on the clicked nav item and its data-view attribute
-      const targetId = item.getAttribute("data-view") + "-view";
-      document.getElementById(targetId).classList.add("active");
-
-      if (item.getAttribute("data-view") === "events") {
-        if (selectedData.city) {
-          getEvents();
-        } else {
-          setEmptyEvents();
-        }
-      }
+      // history.pushState({ view: viewName }, "", "/" + viewName);
+      history.pushState({ view: viewName }, "", "#" + viewName);
+      activateView(viewName);
     });
   }
 }
+
+window.addEventListener("popstate", function (event) {
+  if (event.state && event.state.view) {
+    activateView(event.state.view);
+  } else {
+    activateView("dashboard");
+  }
+});
 
 // Show the loading overlay icon when getting data from the API
 function showLoading(show) {
@@ -233,7 +303,6 @@ function showLoading(show) {
 const API_KEY = "rc_live_4e13125c9f8340768c97acea10c97b55";
 
 const NAGER_BASE_URL = "https://date.nager.at/api/v3";
-// const REST_COUNTRIES_BASE_URL = "https://api.restcountries.com/countries/v5";
 const REST_COUNTRIES_BASE_URL =
   "https://api.restcountries.com/countries/v5?response_fields_omit=names.translations&limit=1&pretty=1&q=";
 
@@ -295,8 +364,8 @@ async function changeCountry() {
   showLoading(true);
 
   try {
-    const url = `${REST_COUNTRIES_BASE_URL}${encodeURIComponent(countryName)}`;
     // const url = `${REST_COUNTRIES_BASE_URL}${countryName}`;
+    const url = `${REST_COUNTRIES_BASE_URL}${encodeURIComponent(countryName)}`;
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${API_KEY}`,
@@ -638,10 +707,10 @@ function displayHolidays() {
     .join("");
 
   // Add click event to save button (heart icon)
-  var saveButtons = document.querySelectorAll(".holiday-action-btn");
+  var saveHolidayButtons = document.querySelectorAll(".holiday-action-btn");
 
-  for (var i = 0; i < saveButtons.length; i++) {
-    saveButtons[i].addEventListener("click", function () {
+  for (var i = 0; i < saveHolidayButtons.length; i++) {
+    saveHolidayButtons[i].addEventListener("click", function () {
       var index = this.dataset.index;
 
       var holiday = selectedData.holidays[index];
@@ -724,15 +793,24 @@ function displayEvents() {
     return;
   }
 
-  const savedPlans = getSavedPlans();
+  var savedPlans = getSavedPlans();
 
   let eventsHTML = "";
   // eventsContent.innerHTML = "";
   for (let i = 0; i < selectedData.events.length; i++) {
-    const event = selectedData.events[i];
-    const eventName = event.name || "Unnamed Event";
-    const eventDate = event.dates?.start?.localDate || "Date not available";
-    const eventTime = event.dates?.start?.localTime || "";
+    var event = selectedData.events[i];
+
+    var eventName = event.name || "Unnamed Event";
+
+    var eventDate =
+      event.dates && event.dates.start && event.dates.start.localDate
+        ? event.dates.start.localDate
+        : "Date not available";
+
+    var eventTime =
+      event.dates && event.dates.start && event.dates.start.localTime
+        ? event.dates.start.localTime
+        : "";
 
     const eventImage =
       event.images && event.images.length > 0
@@ -754,17 +832,27 @@ function displayEvents() {
         : "Venue not available";
 
     const planId = `event-${event.id}`;
-    const isSaved = savedPlans.some((plan) => plan.id === planId);
-    const eventData = JSON.stringify(event).replace(/"/g, "&quot;");
+
+    // Check if this event is already saved
+    var isSaved = false;
+
+    for (var j = 0; j < savedPlans.length; j++) {
+      if (savedPlans[j].id === planId) {
+        isSaved = true;
+        break;
+      }
+    }
 
     eventsHTML += `
         <div class="event-card">
           <div class="event-card-image">
             <img src="${eventImage}" alt="${eventName}"/>
             <span class="event-card-category">${category}</span>
-            <button class="event-card-save ${isSaved ? "saved" : ""}" onclick="savePlan('event', ${eventData})">
+            <button class="event-card-save ${isSaved ? "saved" : ""}"  
+            data-index="${i}"
+            data-plan-id="${planId}"
+            >
               <i class="fa-${isSaved ? "solid" : "regular"} fa-heart"></i>
-            </button>
           </div>
           <div class="event-card-body">
             <h3>${eventName}</h3>
@@ -777,8 +865,8 @@ function displayEvents() {
               </div>
             </div>
             <div class="event-card-footer">
-              <button class="btn-event">
-                <i class="fa-regular fa-heart"></i> Save
+              <button class="btn-event ${isSaved ? "saved" : ""}" data-index="${i}" data-plan-id="${planId}">
+                <i class="fa-${isSaved ? "solid" : "regular"} fa-heart"></i> Save
               </button>
               <a href="${event.url || "#"}" target="_blank" class="btn-buy-ticket"
                 ><i class="fa-solid fa-ticket"></i> Buy Tickets</a
@@ -790,6 +878,59 @@ function displayEvents() {
   }
 
   eventsContent.innerHTML = eventsHTML;
+  var eventCardSave = document.querySelectorAll(".event-card-save");
+  var eventSaveButtons = document.querySelectorAll(".btn-event");
+  // Add event listener to each heart button
+  for (var i = 0; i < eventCardSave.length; i++) {
+    eventCardSave[i].addEventListener("click", function () {
+      var index = this.getAttribute("data-index");
+
+      saveEvent(index);
+    });
+  }
+
+  // Add event listener to each Save button
+  for (var j = 0; j < eventSaveButtons.length; j++) {
+    eventSaveButtons[j].addEventListener("click", function () {
+      var index = this.getAttribute("data-index");
+
+      saveEvent(index);
+    });
+  }
+}
+
+function saveEvent(index) {
+  var event = selectedData.events[index];
+
+  var plan = {
+    id: "event-" + event.id,
+    type: "event",
+    title: event.name || "Unnamed Event",
+    date:
+      event.dates && event.dates.start && event.dates.start.localDate
+        ? event.dates.start.localDate
+        : "Date not available",
+    time:
+      event.dates && event.dates.start && event.dates.start.localTime
+        ? event.dates.start.localTime
+        : "",
+    location:
+      event._embedded &&
+      event._embedded.venues &&
+      event._embedded.venues.length > 0
+        ? event._embedded.venues[0].name
+        : "Venue not available",
+    image: event.images && event.images.length > 0 ? event.images[0].url : "",
+    url: event.url || "#",
+  };
+
+  if (isPlanSaved(plan.id)) {
+    removePlan(plan.id);
+  } else {
+    savePlan(plan);
+    displayEvents();
+    displaySavedPlans();
+  }
 }
 
 const OPEN_METEO_BASE_URL = "https://api.open-meteo.com/v1/forecast";
@@ -1059,9 +1200,7 @@ function displayWeather() {
 
   const todayUV = daily.uv_index_max ? daily.uv_index_max[0] : "N/A";
   const uvStatus = getUvStatus(todayUV);
-  // const uvIndex = daily.uv_index_max[0];
 
-  // const precipitationProbability = daily.precipitation_probability_max[0];
   const precipitationProbability =
     daily.precipitation_probability_max &&
     daily.precipitation_probability_max[0] !== undefined
@@ -1255,17 +1394,10 @@ function displayHourlyForecast(weather) {
     hourlyHTML += `
       <div class="hourly-item ${i === currentIndex ? "now" : ""}">
         <span class="hourly-time">${timeLabel}</span>
-
         <div class="hourly-icon">
-          <i 
-            class="fa-solid ${weatherInfo.icon}"
-            style="color: ${weatherInfo.color}"
-          ></i>
+          <i class="fa-solid ${weatherInfo.icon}" style="color: ${weatherInfo.color}"></i>
         </div>
-
-        <span class="hourly-temp">
-          ${Math.round(hourlyTemperatures[i])}°
-        </span>
+        <span class="hourly-temp"> ${Math.round(hourlyTemperatures[i])}°</span>
       </div>
     `;
   }
@@ -1278,7 +1410,7 @@ function displayDailyForecast(daily) {
     return "";
   }
 
-  let forecastHTML = "";
+  let dailyHTML = "";
 
   for (let i = 0; i < daily.time.length; i++) {
     const date = new Date(daily.time[i]);
@@ -1302,49 +1434,30 @@ function displayDailyForecast(daily) {
         ? daily.precipitation_probability_max[i]
         : 0;
 
-    forecastHTML += `
+    dailyHTML += `
       <div class="forecast-day ${isToday ? "today" : ""}">
-
         <div class="forecast-day-name">
-          <span class="day-label">
-            ${isToday ? "Today" : dayName}
-          </span>
-
-          <span class="day-date">
-            ${dayDate}
-          </span>
+          <span class="day-label"> ${isToday ? "Today" : dayName}</span>
+          <span class="day-date"> ${dayDate}</span>
         </div>
-
         <div class="forecast-icon">
           <i class="fa-solid ${weatherInfo.icon}"></i>
         </div>
 
         <div class="forecast-temps">
-          <span class="temp-max">
-            ${Math.round(daily.temperature_2m_max[i])}°
-          </span>
-
-          <span class="temp-min">
-            ${Math.round(daily.temperature_2m_min[i])}°
-          </span>
+          <span class="temp-max"> ${Math.round(daily.temperature_2m_max[i])}°</span>
+          <span class="temp-min"> ${Math.round(daily.temperature_2m_min[i])}°</span>
         </div>
 
         <div class="forecast-precip">
-          ${
-            precipitation > 0
-              ? `
-                <i class="fa-solid fa-droplet"></i>
-                <span>${precipitation}%</span>
-              `
-              : ""
-          }
+          ${precipitation > 0 ? `<i class="fa-solid fa-droplet"></i><span>${precipitation}%</span>` : ""}
         </div>
 
       </div>
     `;
   }
 
-  return forecastHTML;
+  return dailyHTML;
 }
 
 // show Long Weekends for selected country
@@ -1406,45 +1519,45 @@ function displayLongWeekends() {
     return;
   }
 
-  const savedPlans = getSavedPlans();
+  var savedPlans = getSavedPlans();
 
   lwContent.innerHTML = selectedData.longWeekends
     .map((lw, index) => {
-      const start = new Date(lw.startDate);
-      const end = new Date(lw.endDate);
+      var start = new Date(lw.startDate);
+      var end = new Date(lw.endDate);
 
-      const startFormat = start.toLocaleDateString("en-US", {
+      var startFormat = start.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
 
-      const endFormat = end.toLocaleDateString("en-US", {
+      var endFormat = end.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
 
-      const dateRange = `${startFormat} - ${endFormat}`;
+      var dateRange = `${startFormat} - ${endFormat}`;
 
-      const isBridge = lw.needBridgeDay;
-      const infoClass = isBridge ? "warning" : "success";
-      const infoIcon = isBridge ? "fa-info-circle" : "fa-check-circle";
-      const infoText = isBridge
+      var isBridge = lw.needBridgeDay;
+      var infoClass = isBridge ? "warning" : "success";
+      var infoIcon = isBridge ? "fa-info-circle" : "fa-check-circle";
+      var infoText = isBridge
         ? "Requires taking a bridge day off"
         : "No extra days off needed!";
 
-      let visualDaysHTML = "";
-      let currentDate = new Date(start);
+      var visualDaysHTML = "";
+      var currentDate = new Date(start);
 
       while (currentDate <= end) {
-        const dayName = currentDate.toLocaleDateString("en-US", {
+        var dayName = currentDate.toLocaleDateString("en-US", {
           weekday: "short",
         });
-        const dayNum = currentDate.getDate();
-        const dayOfWeek = currentDate.getDay();
+        var dayNum = currentDate.getDate();
+        var dayOfWeek = currentDate.getDay();
 
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 ? "weekend" : "";
+        var isWeekend = dayOfWeek === 0 || dayOfWeek === 6 ? "weekend" : "";
 
         visualDaysHTML += `
         <div class="lw-day ${isWeekend}">
@@ -1454,9 +1567,16 @@ function displayLongWeekends() {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      const planId = `lw-${lw.startDate}-${lw.dayCount}`;
-      const isSaved = savedPlans.some((plan) => plan.id === planId);
-      const lwData = JSON.stringify(lw).replace(/"/g, "&quot;");
+      // var planId = `lw-${lw.startDate}-${lw.endDate}`;
+      var planId = "long-weekend-" + lw.startDate + "-" + lw.endDate;
+      var isSaved = false;
+
+      for (var j = 0; j < savedPlans.length; j++) {
+        if (savedPlans[j].id === planId) {
+          isSaved = true;
+          break;
+        }
+      }
 
       return `
       <div class="lw-card">
@@ -1464,12 +1584,12 @@ function displayLongWeekends() {
           <span class="lw-badge">
             <i class="fa-solid fa-calendar-days"></i> ${lw.dayCount} Days
           </span>
-          <button class="holiday-action-btn ${isSaved ? "saved" : ""}" onclick="savePlan('long-weekend', ${lwData})">
-            <i class="fa-${isSaved ? "solid" : "regular"} fa-heart"></i>
+          <button class="holiday-action-btn ${isSaved ? "saved" : ""}" data-index="${index}" data-plan-id="${planId}">
+            <i class="${isSaved ? "fa-solid" : "fa-regular"} fa-heart"></i>
           </button>
         </div>
         
-        <h3>Long Weekend #${index + 1}</h3>
+        <h3>${lw.dayCount} Day Long Weekend</h3>
         <div class="lw-dates">
           <i class="fa-regular fa-calendar"></i> ${dateRange}
         </div>
@@ -1483,6 +1603,38 @@ function displayLongWeekends() {
     `;
     })
     .join("");
+
+  var saveLongWeekendButtons = document.querySelectorAll(".holiday-action-btn");
+
+  for (var i = 0; i < saveLongWeekendButtons.length; i++) {
+    saveLongWeekendButtons[i].addEventListener("click", function () {
+      var index = this.getAttribute("data-index");
+
+      var lw = selectedData.longWeekends[index];
+
+      var plan = {
+        id: "long-weekend-" + lw.startDate + "-" + lw.endDate,
+        type: "long-weekend",
+        title: lw.dayCount + " Day Long Weekend",
+        startDate: lw.startDate,
+        endDate: lw.endDate,
+        dayCount: lw.dayCount,
+        needBridgeDay: lw.needBridgeDay,
+        location: selectedData.countryName,
+        countryCode: selectedData.countryCode,
+      };
+
+      if (isPlanSaved(plan.id)) {
+        removePlan(plan.id, function () {
+          displayLongWeekends();
+        });
+      } else {
+        savePlan(plan);
+
+        displayLongWeekends();
+      }
+    });
+  }
 }
 
 // Saved Plans
@@ -1519,7 +1671,6 @@ function savePlan(plan) {
   }
 
   if (alreadySaved) {
-    // showToast("This item is already saved.", "info");
     return;
   }
 
@@ -1527,9 +1678,10 @@ function savePlan(plan) {
 
   localStorage.setItem(storagePlans, JSON.stringify(savedPlans));
 
-  // showToast("Item saved successfully!", "success");
   displaySavedPlans();
   displayHolidays();
+  displayEvents();
+  displayLongWeekends();
 }
 
 function removePlan(planId) {
@@ -1568,70 +1720,192 @@ function removePlan(planId) {
 
       // Refresh the current section
       displayHolidays();
+      displayEvents();
+      displayLongWeekends();
     }
   });
+}
+
+// Variable to keep track of which tab is currently selected
+let currentPlanFilter = "all";
+
+// Initialize the filter buttons
+function planFilter() {
+  const planFilter = document.querySelectorAll(".plan-filter");
+
+  for (let i = 0; i < planFilter.length; i++) {
+    planFilter[i].addEventListener("click", function () {
+      // Remove 'active' class from all buttons
+      for (let j = 0; j < planFilter.length; j++) {
+        planFilter[j].classList.remove("active");
+      }
+      // Add 'active' class to the clicked button
+      this.classList.add("active");
+
+      currentPlanFilter = this.getAttribute("data-filter");
+
+      displaySavedPlans();
+    });
+  }
 }
 
 function displaySavedPlans() {
   var savedPlans = getSavedPlans();
 
+  updateSavedPlansCounts(savedPlans);
+
   plansContent.innerHTML = "";
 
-  if (savedPlans.length === 0) {
+  var filteredPlans = [];
+
+  if (currentPlanFilter === "all") {
+    filteredPlans = savedPlans;
+  } else {
+    for (var k = 0; k < savedPlans.length; k++) {
+      if (
+        currentPlanFilter === "longweekend" &&
+        savedPlans[k].type === "long-weekend"
+      ) {
+        filteredPlans.push(savedPlans[k]);
+      } else if (savedPlans[k].type === currentPlanFilter) {
+        filteredPlans.push(savedPlans[k]);
+      }
+    }
+  }
+
+  // Check if the filtered array is empty
+  if (filteredPlans.length === 0) {
     plansContent.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">
           <i class="fa-solid fa-heart-crack"></i>
         </div>
-        <h3>No Saved Plans Yet</h3>
+        <h3>No ${currentPlanFilter === "all" ? "Saved" : currentPlanFilter.toUpperCase()} Plans Yet</h3>
         <p>
           Start exploring and save holidays, events, or long weekends
           you like!
         </p>
-        <button class="btn-primary" id="start-exploring-btn">
+        <button class="btn-primary" id="start-exploring-btn" onclick="document.querySelector('[data-view=\\'dashboard\\']').click()">
           <i class="fa-solid fa-compass"></i>
           Start Exploring
         </button>
       </div>
     `;
-
     return;
   }
 
-  for (var i = 0; i < savedPlans.length; i++) {
-    var plan = savedPlans[i];
+  // Display the filtered plans
+  for (var i = 0; i < filteredPlans.length; i++) {
+    var plan = filteredPlans[i];
+    var planHTML = "";
 
-    plansContent.innerHTML += `
-      <div class="plan-card">
-        <span class="plan-card-type ${plan.type}">${plan.type}</span>
-        <div class="plan-card-content">
-          <h4>${plan.title}</h4>
-
-          <div class="plan-card-details">
-            <div><i class="fa-regular fa-calendar"></i>${plan.date}</div>
-            <div><i class="fa-solid fa-location-dot"></i>${plan.location}</div>
-          </div>
-          
-          <div class="plan-card-actions">
-            <button class="btn-plan-remove" data-plan-id="${plan.id}">
-              <i class="fa-solid fa-trash"></i> Remove
-            </button>
+    if (plan.type === "holiday") {
+      planHTML = `
+        <div class="plan-card">
+          <span class="plan-card-type ${plan.type}">${plan.type}</span>
+          <div class="plan-card-content">
+            <h4>${plan.title}</h4>
+            <div class="plan-card-details">
+              <div><i class="fa-regular fa-calendar"></i>${plan.date}</div>
+              <div><i class="fa-solid fa-info-circle"></i>${plan.location}</div>
+            </div>
+            <div class="plan-card-actions">
+              <button class="btn-plan-remove" data-plan-id="${plan.id}">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    `;
+      `;
+    } else if (plan.type === "event") {
+      planHTML = `
+        <div class="plan-card">
+          <span class="plan-card-type ${plan.type}">${plan.type}</span>
+          <div class="plan-card-content">
+            <h4>${plan.title}</h4>
+            <div class="plan-card-details">
+              <div><i class="fa-regular fa-calendar"></i>${plan.date}</div>
+              <div><i class="fa-solid fa-info-circle"></i>${plan.location}</div>
+            </div>
+            <div class="plan-card-actions">
+              <button class="btn-plan-remove" data-plan-id="${plan.id}">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (plan.type === "long-weekend" || plan.type === "longweekend") {
+      planHTML = `
+        <div class="plan-card">
+          <span class="plan-card-type longweekend">Long Weekend</span>
+          <div class="plan-card-content">
+            <h4>${plan.title}</h4>
+            <div class="plan-card-details">
+              <div><i class="fa-regular fa-calendar"></i>${plan.startDate} - ${plan.endDate}</div>
+              <div><i class="fa-solid fa-info-circle"></i>${plan.needBridgeDay ? "Requires taking a bridge day off" : "No extra days needed"}</div>
+            </div>
+            <div class="plan-card-actions">
+              <button class="btn-plan-remove" data-plan-id="${plan.id}">
+                <i class="fa-solid fa-trash"></i> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    plansContent.innerHTML += planHTML;
   }
 
   var removePlanButton = document.querySelectorAll(".btn-plan-remove");
   for (var j = 0; j < removePlanButton.length; j++) {
     removePlanButton[j].addEventListener("click", function () {
       var planId = this.getAttribute("data-plan-id");
-
       removePlan(planId);
-
-      // displaySavedPlans();
-      // displayHolidays();
     });
+  }
+}
+
+function updateSavedPlansCounts(savedPlans) {
+  var holidayCount = 0;
+  var eventCount = 0;
+  var longWeekendCount = 0;
+
+  for (var i = 0; i < savedPlans.length; i++) {
+    if (savedPlans[i].type === "holiday") {
+      holidayCount++;
+    } else if (savedPlans[i].type === "event") {
+      eventCount++;
+    } else if (
+      savedPlans[i].type === "long-weekend" ||
+      savedPlans[i].type === "longweekend"
+    ) {
+      longWeekendCount++;
+    }
+  }
+
+  var totalCount = holidayCount + eventCount + longWeekendCount;
+
+  myPlansCount.textContent = totalCount;
+
+  // if (myPlansCount !== null) {
+  //   myPlansCount.textContent = totalCount;
+  //   if (totalCount > 0) {
+  //     myPlansCount.style.display = "inline-flex";
+  //   } else {
+  //     myPlansCount.style.display = "none";
+  //   }
+  // }
+
+  // Tab counts
+  if (allPlansCount) allPlansCount.textContent = totalCount;
+  if (holidaysCount) holidaysCount.textContent = holidayCount;
+  if (eventsCount) eventsCount.textContent = eventCount;
+  if (longWeekendsCount) longWeekendsCount.textContent = longWeekendCount;
+
+  if (NumberSavedPlans) {
+    NumberSavedPlans.textContent = totalCount;
   }
 }
 
@@ -1712,13 +1986,21 @@ function loadApp() {
 
   citySelect.addEventListener("change", () => {
     selectedData.city = citySelect.value;
-    // selectedData.city = "New York";
   });
 
   yearSelect.addEventListener("change", () => {
     selectedData.year = yearSelect.value;
   });
   exploreBtn.addEventListener("click", exploreDestination);
+
+  planFilter();
+  displaySavedPlans();
+
+  const path = window.location.pathname.replace("/", "");
+  const initialView = path || "dashboard";
+
+  history.replaceState({ view: initialView }, "", "/" + initialView);
+  activateView(initialView);
 }
 
 document.addEventListener("DOMContentLoaded", loadApp);
